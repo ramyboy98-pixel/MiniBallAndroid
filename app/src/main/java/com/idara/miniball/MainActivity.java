@@ -3,11 +3,13 @@ package com.idara.miniball;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.os.Handler;
 import android.graphics.*;
 import android.view.*;
 import android.widget.*;
 import android.text.InputType;
 import android.content.pm.ActivityInfo;
+import android.content.DialogInterface;
 
 import java.net.*;
 import java.util.*;
@@ -22,6 +24,9 @@ public class MainActivity extends Activity {
     private TextView timerText;
 
     private EditText ipInput;
+
+    private FrameLayout splashOverlay;
+    private Handler splashHandler = new Handler();
 
     private Button hostBtn;
     private Button joinBtn;
@@ -123,6 +128,8 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
+        addSplashScreen(root);
+
         setContentView(root);
 
         hostBtn.setOnClickListener(new View.OnClickListener() {
@@ -160,11 +167,95 @@ public class MainActivity extends Activity {
         settingsBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                showHostSettingsDialog();
+                showSettingsDialog();
             }
         });
 
         updateTeamButtons();
+    }
+
+
+    private void addSplashScreen(final FrameLayout root) {
+        splashOverlay = new FrameLayout(this);
+        splashOverlay.setBackgroundColor(Color.rgb(9, 12, 18));
+        splashOverlay.setClickable(true);
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setGravity(Gravity.CENTER);
+        content.setPadding(dp(24), dp(24), dp(24), dp(24));
+
+        TextView title = new TextView(this);
+        title.setText("fireball");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(52);
+        title.setGravity(Gravity.CENTER);
+        title.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
+        title.setShadowLayer(18f, 0f, 0f, Color.rgb(255, 115, 30));
+
+        TextView subtitle = new TextView(this);
+        subtitle.setText("2D Wi-Fi Football");
+        subtitle.setTextColor(Color.argb(225, 255, 210, 120));
+        subtitle.setTextSize(17);
+        subtitle.setGravity(Gravity.CENTER);
+        subtitle.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        subtitle.setPadding(0, dp(10), 0, 0);
+
+        content.addView(title, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        content.addView(subtitle, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        splashOverlay.addView(content, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        TextView credit = new TextView(this);
+        credit.setText("Mohammed BELKEBIR ABDELKARIM");
+        credit.setTextColor(Color.argb(230, 255, 255, 255));
+        credit.setTextSize(15);
+        credit.setGravity(Gravity.CENTER);
+        credit.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        credit.setPadding(dp(12), 0, dp(12), dp(24));
+
+        FrameLayout.LayoutParams creditParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        creditParams.gravity = Gravity.BOTTOM;
+        splashOverlay.addView(credit, creditParams);
+
+        root.addView(splashOverlay, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        splashHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (splashOverlay != null) {
+                    splashOverlay.animate()
+                            .alpha(0f)
+                            .setDuration(450)
+                            .withEndAction(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (splashOverlay != null) {
+                                        root.removeView(splashOverlay);
+                                        splashOverlay = null;
+                                    }
+                                }
+                            })
+                            .start();
+                }
+            }
+        }, 5000);
     }
 
     private void buildCompactHud(FrameLayout root) {
@@ -243,6 +334,128 @@ public class MainActivity extends Activity {
     private void updateTeamButtons() {
         redTeamBtn.setBackgroundColor(requestedTeam == 0 ? Color.rgb(235, 70, 70) : Color.argb(145, 70, 70, 70));
         blueTeamBtn.setBackgroundColor(requestedTeam == 1 ? Color.rgb(70, 145, 255) : Color.argb(145, 70, 70, 70));
+    }
+
+    private void showSettingsDialog() {
+        final String[] items = new String[] {
+                "إعدادات المباراة والألوان",
+                "إعدادات أزرار التحكم"
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("الإعدادات")
+                .setItems(items, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (which == 0) {
+                            showHostSettingsDialog();
+                        } else {
+                            showControlSettingsDialog();
+                        }
+                    }
+                })
+                .show();
+    }
+
+    private interface ControlSliderListener {
+        void onChanged(int value);
+    }
+
+    private void showControlSettingsDialog() {
+        final LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(22), dp(14), dp(22), dp(10));
+
+        TextView hint = new TextView(this);
+        hint.setText("عدّل حجم ومكان أزرار التحكم على هذا الهاتف فقط.");
+        hint.setTextColor(Color.DKGRAY);
+        hint.setTextSize(14);
+        hint.setPadding(0, 0, 0, dp(10));
+        box.addView(hint);
+
+        addControlSlider(box, "حجم أزرار PASS/THROUGH/SHOOT", 70, 170, gameView.getActionButtonSizePercent(), new ControlSliderListener() {
+            @Override
+            public void onChanged(int value) {
+                gameView.setActionButtonSizePercent(value);
+            }
+        });
+
+        addControlSlider(box, "إدخال الأزرار من اليمين", 0, 220, gameView.getActionButtonInsetX(), new ControlSliderListener() {
+            @Override
+            public void onChanged(int value) {
+                gameView.setActionButtonInsetX(value);
+            }
+        });
+
+        addControlSlider(box, "رفع الأزرار من الأسفل", 0, 220, gameView.getActionButtonInsetY(), new ControlSliderListener() {
+            @Override
+            public void onChanged(int value) {
+                gameView.setActionButtonInsetY(value);
+            }
+        });
+
+        addControlSlider(box, "حجم joystick", 70, 150, gameView.getJoystickSizePercent(), new ControlSliderListener() {
+            @Override
+            public void onChanged(int value) {
+                gameView.setJoystickSizePercent(value);
+            }
+        });
+
+        addControlSlider(box, "حساسية joystick", 60, 160, gameView.getJoystickRangePercent(), new ControlSliderListener() {
+            @Override
+            public void onChanged(int value) {
+                gameView.setJoystickRangePercent(value);
+            }
+        });
+
+        Button resetBtn = new Button(this);
+        resetBtn.setText("إرجاع التحكم للوضع الافتراضي");
+        resetBtn.setTextColor(Color.WHITE);
+        resetBtn.setBackgroundColor(Color.rgb(60, 105, 220));
+        resetBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                gameView.resetControlLayout();
+            }
+        });
+
+        box.addView(resetBtn, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(46)
+        ));
+
+        new AlertDialog.Builder(this)
+                .setTitle("أزرار التحكم")
+                .setView(box)
+                .setPositiveButton("تم", null)
+                .show();
+    }
+
+    private void addControlSlider(LinearLayout box, final String title, int min, int max, int current, final ControlSliderListener listener) {
+        final TextView label = new TextView(this);
+        label.setTextColor(Color.BLACK);
+        label.setTextSize(15);
+        label.setText(title + ": " + current);
+        label.setPadding(0, dp(8), 0, 0);
+        box.addView(label);
+
+        SeekBar seek = new SeekBar(this);
+        seek.setMax(max - min);
+        seek.setProgress(current - min);
+        box.addView(seek);
+
+        final int minValue = min;
+        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                int value = minValue + progress;
+                label.setText(title + ": " + value);
+                listener.onChanged(value);
+            }
+
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
     }
 
     private void showHostSettingsDialog() {
@@ -337,6 +550,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (splashHandler != null) {
+            splashHandler.removeCallbacksAndMessages(null);
+        }
         if (gameView != null) {
             gameView.stopNetwork();
             gameView.stopGameLoop();
@@ -447,6 +663,54 @@ public class MainActivity extends Activity {
                     hud.onTime(lastSecondsLeft);
                 }
             }
+        }
+
+        public int getActionButtonSizePercent() {
+            return actionButtonSizePercent;
+        }
+
+        public void setActionButtonSizePercent(int value) {
+            actionButtonSizePercent = Math.max(70, Math.min(170, value));
+        }
+
+        public int getActionButtonInsetX() {
+            return actionButtonInsetX;
+        }
+
+        public void setActionButtonInsetX(int value) {
+            actionButtonInsetX = Math.max(0, Math.min(220, value));
+        }
+
+        public int getActionButtonInsetY() {
+            return actionButtonInsetY;
+        }
+
+        public void setActionButtonInsetY(int value) {
+            actionButtonInsetY = Math.max(0, Math.min(220, value));
+        }
+
+        public int getJoystickSizePercent() {
+            return joystickSizePercent;
+        }
+
+        public void setJoystickSizePercent(int value) {
+            joystickSizePercent = Math.max(70, Math.min(150, value));
+        }
+
+        public int getJoystickRangePercent() {
+            return joystickRangePercent;
+        }
+
+        public void setJoystickRangePercent(int value) {
+            joystickRangePercent = Math.max(60, Math.min(160, value));
+        }
+
+        public void resetControlLayout() {
+            actionButtonSizePercent = 115;
+            actionButtonInsetX = 36;
+            actionButtonInsetY = 42;
+            joystickSizePercent = 100;
+            joystickRangePercent = 100;
         }
 
         public void stopGameLoop() {
@@ -1677,12 +1941,16 @@ public class MainActivity extends Activity {
         private void drawJoystick(Canvas c) {
             if (!touching) return;
 
+            float baseRadius = 62f * (joystickSizePercent / 100f);
+            float knobRadius = 25f * (joystickSizePercent / 100f);
+            float knobRange = 48f * (joystickSizePercent / 100f);
+
             p.setStyle(Paint.Style.FILL);
             p.setColor(Color.argb(65, 255, 255, 255));
-            c.drawCircle(touchStartX, touchStartY, 62, p);
+            c.drawCircle(touchStartX, touchStartY, baseRadius, p);
 
             p.setColor(Color.argb(165, 255, 255, 255));
-            c.drawCircle(touchStartX + joyX * 48, touchStartY + joyY * 48, 25, p);
+            c.drawCircle(touchStartX + joyX * knobRange, touchStartY + joyY * knobRange, knobRadius, p);
         }
 
         private void drawActionButtons(Canvas c) {
@@ -1802,7 +2070,7 @@ public class MainActivity extends Activity {
                 float dy = my - touchStartY;
 
                 float len = (float) Math.sqrt(dx * dx + dy * dy);
-                float max = 78f;
+                float max = 78f * (joystickRangePercent / 100f);
 
                 if (len > max) {
                     dx = dx / len * max;
