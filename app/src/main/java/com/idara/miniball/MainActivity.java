@@ -28,42 +28,12 @@ public class MainActivity extends Activity {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.rgb(8, 10, 14));
 
-        gameView = new GameView(this, new GameView.HudListener() {
-            @Override
-            public void onStatus(final String s) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        statusText.setText(s);
-                    }
-                });
-            }
-
-            @Override
-            public void onScore(final int red, final int blue) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        scoreText.setText(red + " - " + blue);
-                    }
-                });
-            }
-
-            @Override
-            public void onPlayers(final int count) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        playersText.setText("Players: " + count);
-                    }
-                });
-            }
-        });
-
-        root.addView(gameView, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-        ));
+        /*
+         * مهم:
+         * في النسخة السابقة كان GameView يُنشأ قبل TextViews،
+         * وهذا قد يسبب خروج التطبيق مباشرة عند التشغيل.
+         * لذلك ننشئ عناصر الواجهة أولاً ثم ننشئ GameView.
+         */
 
         LinearLayout topBar = new LinearLayout(this);
         topBar.setOrientation(LinearLayout.HORIZONTAL);
@@ -112,12 +82,54 @@ public class MainActivity extends Activity {
         topBar.addView(playersText, new LinearLayout.LayoutParams(dp(120), dp(44)));
         topBar.addView(scoreText, new LinearLayout.LayoutParams(dp(110), dp(44)));
 
+        gameView = new GameView(this, new GameView.HudListener() {
+            @Override
+            public void onStatus(final String s) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (statusText != null) {
+                            statusText.setText(s);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onScore(final int red, final int blue) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (scoreText != null) {
+                            scoreText.setText(red + " - " + blue);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onPlayers(final int count) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (playersText != null) {
+                            playersText.setText("Players: " + count);
+                        }
+                    }
+                });
+            }
+        });
+
+        root.addView(gameView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
         FrameLayout.LayoutParams topParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 dp(58)
         );
         topParams.gravity = Gravity.TOP;
-
         root.addView(topBar, topParams);
 
         setContentView(root);
@@ -157,6 +169,7 @@ public class MainActivity extends Activity {
         super.onDestroy();
         if (gameView != null) {
             gameView.stopNetwork();
+            gameView.stopGameLoop();
         }
     }
 
@@ -215,6 +228,14 @@ public class MainActivity extends Activity {
         private long lastNetSend = 0;
         private long lastHelloSend = 0;
 
+        /*
+         * الحيازة والدفاع:
+         * carrierId = اللاعب الذي يملك الكرة حالياً.
+         * إذا اصطدم به لاعب من الفريق الآخر بقوة كافية، تُنزع الكرة منه.
+         */
+        private int carrierId = -1;
+        private long lastTackleTime = 0;
+
         private final int[] playerColors = new int[] {
                 Color.rgb(235, 70, 70),
                 Color.rgb(70, 145, 255),
@@ -249,6 +270,10 @@ public class MainActivity extends Activity {
             hud.onStatus("HOST في الهاتف الأول، JOIN في باقي الهواتف");
             hud.onScore(redScore, blueScore);
             hud.onPlayers(0);
+        }
+
+        public void stopGameLoop() {
+            running = false;
         }
 
         public void startHost() {
@@ -495,7 +520,7 @@ public class MainActivity extends Activity {
         private void applyState(String msg) {
             String[] main = msg.split("\\|");
 
-            if (main.length < 8) return;
+            if (main.length < 9) return;
 
             synchronized (lock) {
                 redScore = safeInt(main[1], 0);
@@ -506,14 +531,16 @@ public class MainActivity extends Activity {
                 ball.vx = safeFloat(main[5], 0);
                 ball.vy = safeFloat(main[6], 0);
 
+                carrierId = safeInt(main[7], -1);
+
                 for (int i = 0; i < MAX_PLAYERS; i++) {
                     players[i].active = false;
                 }
 
-                int count = safeInt(main[7], 0);
+                int count = safeInt(main[8], 0);
 
                 for (int i = 0; i < count; i++) {
-                    int index = 8 + i;
+                    int index = 9 + i;
                     if (index >= main.length) break;
 
                     String[] d = main[index].split(",");
@@ -564,6 +591,7 @@ public class MainActivity extends Activity {
             sb.append(fmt(ball.y)).append("|");
             sb.append(fmt(ball.vx)).append("|");
             sb.append(fmt(ball.vy)).append("|");
+            sb.append(carrierId).append("|");
 
             int count = 0;
             for (int i = 0; i < MAX_PLAYERS; i++) {
@@ -711,6 +739,13 @@ public class MainActivity extends Activity {
                 clampPlayer(pl);
             }
 
+            /*
+             * الدفاع أولاً:
+             * إذا لاعب من الفريق الخصم اصطدم بحامل الكرة بقوة،
+             * نزع الكرة يحدث قبل تنفيذ التحكم بالكرة.
+             */
+            applyDefenseTackles();
+
             applyBallControlAndActions();
 
             moveBall(dt);
@@ -793,33 +828,39 @@ public class MainActivity extends Activity {
             if (ball.y < ball.r) {
                 ball.y = ball.r;
                 ball.vy *= -0.78f;
+                carrierId = -1;
             }
 
             if (ball.y > fieldH - ball.r) {
                 ball.y = fieldH - ball.r;
                 ball.vy *= -0.78f;
+                carrierId = -1;
             }
 
             if (ball.x < ball.r) {
                 if (ball.y > goalTop && ball.y < goalBottom) {
                     blueScore++;
+                    carrierId = -1;
                     hud.onScore(redScore, blueScore);
                     resetRound();
                     return;
                 } else {
                     ball.x = ball.r;
                     ball.vx *= -0.78f;
+                    carrierId = -1;
                 }
             }
 
             if (ball.x > fieldW - ball.r) {
                 if (ball.y > goalTop && ball.y < goalBottom) {
                     redScore++;
+                    carrierId = -1;
                     hud.onScore(redScore, blueScore);
                     resetRound();
                 } else {
                     ball.x = fieldW - ball.r;
                     ball.vx *= -0.78f;
+                    carrierId = -1;
                 }
             }
         }
@@ -893,8 +934,86 @@ public class MainActivity extends Activity {
             }
         }
 
+        private void applyDefenseTackles() {
+            if (carrierId < 0 || carrierId >= MAX_PLAYERS) return;
+
+            Player carrier = players[carrierId];
+            if (!carrier.active) {
+                carrierId = -1;
+                return;
+            }
+
+            long now = System.currentTimeMillis();
+            if (now - lastTackleTime < 220) return;
+
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                Player defender = players[i];
+
+                if (!defender.active) continue;
+                if (defender.id == carrier.id) continue;
+                if (defender.team == carrier.team) continue;
+
+                float dx = defender.x - carrier.x;
+                float dy = defender.y - carrier.y;
+                float dist = (float) Math.sqrt(dx * dx + dy * dy);
+
+                float tackleDistance = defender.r + carrier.r + 7f;
+
+                if (dist < tackleDistance) {
+                    float defenderSpeed = (float) Math.sqrt(defender.vx * defender.vx + defender.vy * defender.vy);
+                    float carrierSpeed = (float) Math.sqrt(carrier.vx * carrier.vx + carrier.vy * carrier.vy);
+
+                    /*
+                     * نزع الكرة إذا المدافع دخل بقوة أو إذا الاصطدام واضح.
+                     */
+                    if (defenderSpeed > 80f || defenderSpeed > carrierSpeed * 0.65f) {
+                        float nx;
+                        float ny;
+
+                        if (dist > 1f) {
+                            nx = dx / dist;
+                            ny = dy / dist;
+                        } else {
+                            nx = defender.team == 0 ? 1f : -1f;
+                            ny = 0f;
+                        }
+
+                        carrierId = defender.id;
+                        lastTackleTime = now;
+
+                        ball.x = defender.x - nx * (defender.r + ball.r + 4f);
+                        ball.y = defender.y - ny * (defender.r + ball.r + 4f);
+
+                        ball.vx = defender.vx * 0.85f - nx * 180f;
+                        ball.vy = defender.vy * 0.85f - ny * 180f;
+
+                        hud.onStatus("TACKLE! Player " + (defender.id + 1) + " نزع الكرة");
+                        return;
+                    }
+                }
+            }
+        }
+
         private void applyBallControlAndActions() {
-            Player controller = getClosestPlayerToBall(60f);
+            Player controller;
+
+            if (carrierId >= 0 && carrierId < MAX_PLAYERS && players[carrierId].active) {
+                controller = players[carrierId];
+
+                float dx = ball.x - controller.x;
+                float dy = ball.y - controller.y;
+                float dist = (float) Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 95f) {
+                    carrierId = -1;
+                    controller = getClosestPlayerToBall(60f);
+                }
+            } else {
+                controller = getClosestPlayerToBall(60f);
+                if (controller != null) {
+                    carrierId = controller.id;
+                }
+            }
 
             if (controller == null) return;
 
@@ -922,20 +1041,22 @@ public class MainActivity extends Activity {
 
             if (controller.shootPressed) {
                 shootToGoal(controller);
+                carrierId = -1;
                 return;
             }
 
             if (controller.passPressed) {
                 passToTeammate(controller);
+                carrierId = -1;
                 return;
             }
 
-            if (inputLen > 0.12f) {
+            if (inputLen > 0.08f) {
                 float targetX = controller.x + dirX * (controller.r + ball.r + 5f);
                 float targetY = controller.y + dirY * (controller.r + ball.r + 5f);
 
-                ball.x += (targetX - ball.x) * 0.22f;
-                ball.y += (targetY - ball.y) * 0.22f;
+                ball.x += (targetX - ball.x) * 0.24f;
+                ball.y += (targetY - ball.y) * 0.24f;
 
                 ball.vx = controller.vx + dirX * 85f;
                 ball.vy = controller.vy + dirY * 85f;
@@ -1033,11 +1154,15 @@ public class MainActivity extends Activity {
         }
 
         private void resetLocalClientState() {
+            carrierId = -1;
+
             for (int i = 0; i < MAX_PLAYERS; i++) {
                 players[i].active = false;
                 players[i].isLocal = false;
                 players[i].inputX = 0;
                 players[i].inputY = 0;
+                players[i].passPressed = false;
+                players[i].shootPressed = false;
             }
 
             ball.x = fieldW / 2f;
@@ -1049,6 +1174,7 @@ public class MainActivity extends Activity {
         private void resetMatch() {
             redScore = 0;
             blueScore = 0;
+            carrierId = -1;
 
             for (int i = 0; i < MAX_PLAYERS; i++) {
                 players[i].active = false;
@@ -1065,6 +1191,8 @@ public class MainActivity extends Activity {
         }
 
         private void resetRound() {
+            carrierId = -1;
+
             ball.x = fieldW / 2f;
             ball.y = fieldH / 2f;
             ball.vx = 0;
@@ -1205,8 +1333,21 @@ public class MainActivity extends Activity {
 
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(pl.isLocal ? 6 : 3);
-            p.setColor(pl.isLocal ? Color.YELLOW : Color.WHITE);
+
+            if (pl.id == carrierId) {
+                p.setColor(Color.rgb(255, 230, 35));
+            } else {
+                p.setColor(pl.isLocal ? Color.YELLOW : Color.WHITE);
+            }
+
             c.drawCircle(pl.x, pl.y, pl.r, p);
+
+            if (pl.id == carrierId) {
+                p.setStyle(Paint.Style.STROKE);
+                p.setStrokeWidth(3);
+                p.setColor(Color.argb(220, 255, 230, 35));
+                c.drawCircle(pl.x, pl.y, pl.r + 9, p);
+            }
 
             p.setStyle(Paint.Style.FILL);
             p.setTextAlign(Paint.Align.CENTER);
