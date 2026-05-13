@@ -808,4 +808,396 @@ public class MainActivity extends Activity {
                 float ty = nx;
 
                 float dpTanA = a.vx * tx + a.vy * ty;
-                float dp
+                float dpTanB = b.vx * tx + b.vy * ty;
+
+                float dpNormA = a.vx * nx + a.vy * ny;
+                float dpNormB = b.vx * nx + b.vy * ny;
+
+                a.vx = tx * dpTanA + nx * dpNormB * 0.85f;
+                a.vy = ty * dpTanA + ny * dpNormB * 0.85f;
+
+                b.vx = tx * dpTanB + nx * dpNormA * 0.85f;
+                b.vy = ty * dpTanB + ny * dpNormA * 0.85f;
+            }
+        }
+
+        private void collidePlayerBall(Player pl, Ball b) {
+            float dx = b.x - pl.x;
+            float dy = b.y - pl.y;
+            float dist = (float) Math.sqrt(dx * dx + dy * dy);
+            float min = pl.r + b.r;
+
+            if (dist > 0 && dist < min) {
+                float nx = dx / dist;
+                float ny = dy / dist;
+                float overlap = min - dist;
+
+                b.x += nx * overlap;
+                b.y += ny * overlap;
+
+                float relVx = b.vx - pl.vx;
+                float relVy = b.vy - pl.vy;
+                float sep = relVx * nx + relVy * ny;
+
+                if (sep < 0) {
+                    b.vx -= 1.75f * sep * nx;
+                    b.vy -= 1.75f * sep * ny;
+                }
+
+                b.vx += pl.vx * 0.42f;
+                b.vy += pl.vy * 0.42f;
+
+                float maxBallSpeed = 650f;
+
+                float sp = (float) Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+                if (sp > maxBallSpeed) {
+                    b.vx = b.vx / sp * maxBallSpeed;
+                    b.vy = b.vy / sp * maxBallSpeed;
+                }
+            }
+        }
+
+        private void resetLocalClientState() {
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                players[i].active = false;
+                players[i].isLocal = false;
+                players[i].inputX = 0;
+                players[i].inputY = 0;
+            }
+
+            ball.x = fieldW / 2f;
+            ball.y = fieldH / 2f;
+            ball.vx = 0;
+            ball.vy = 0;
+        }
+
+        private void resetMatch() {
+            redScore = 0;
+            blueScore = 0;
+
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                players[i].active = false;
+                players[i].isLocal = false;
+                players[i].inputX = 0;
+                players[i].inputY = 0;
+                players[i].team = i % 2;
+            }
+
+            resetRound();
+            hud.onScore(redScore, blueScore);
+        }
+
+        private void resetRound() {
+            ball.x = fieldW / 2f;
+            ball.y = fieldH / 2f;
+            ball.vx = 0;
+            ball.vy = 0;
+
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                if (players[i].active) {
+                    spawnPlayer(players[i]);
+                }
+            }
+        }
+
+        private void spawnPlayer(Player pl) {
+            int teamIndex = pl.id / 2;
+            float gap = 85f;
+
+            if (pl.team == 0) {
+                pl.x = 220f + teamIndex * 55f;
+                pl.y = fieldH / 2f - 170f + teamIndex * gap;
+            } else {
+                pl.x = fieldW - 220f - teamIndex * 55f;
+                pl.y = fieldH / 2f - 170f + teamIndex * gap;
+            }
+
+            if (pl.y < 90f) pl.y = 90f;
+            if (pl.y > fieldH - 90f) pl.y = fieldH - 90f;
+
+            pl.vx = 0;
+            pl.vy = 0;
+            pl.inputX = 0;
+            pl.inputY = 0;
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            super.onDraw(c);
+
+            float screenW = getWidth();
+            float screenH = getHeight();
+
+            float scale = Math.min(screenW / fieldW, screenH / fieldH);
+            float ox = (screenW - fieldW * scale) / 2f;
+            float oy = (screenH - fieldH * scale) / 2f;
+
+            c.drawColor(Color.rgb(10, 12, 15));
+
+            c.save();
+            c.translate(ox, oy);
+            c.scale(scale, scale);
+
+            drawField(c);
+            drawPlayersAndBall(c);
+
+            c.restore();
+
+            drawJoystick(c);
+            drawLocalPlayerInfo(c);
+        }
+
+        private void drawField(Canvas c) {
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(Color.rgb(37, 132, 74));
+            c.drawRoundRect(0, 0, fieldW, fieldH, 26, 26, p);
+
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(5);
+            p.setColor(Color.argb(210, 255, 255, 255));
+            c.drawRoundRect(18, 18, fieldW - 18, fieldH - 18, 20, 20, p);
+
+            p.setStrokeWidth(4);
+            c.drawLine(fieldW / 2f, 18, fieldW / 2f, fieldH - 18, p);
+            c.drawCircle(fieldW / 2f, fieldH / 2f, 105, p);
+
+            float goalTop = fieldH / 2f - 135f;
+            float goalBottom = fieldH / 2f + 135f;
+
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(Color.rgb(30, 33, 40));
+            c.drawRect(-20, goalTop, 25, goalBottom, p);
+            c.drawRect(fieldW - 25, goalTop, fieldW + 20, goalBottom, p);
+
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(7);
+            p.setColor(Color.WHITE);
+            c.drawLine(0, goalTop, 0, goalBottom, p);
+            c.drawLine(fieldW, goalTop, fieldW, goalBottom, p);
+
+            p.setStrokeWidth(3);
+            p.setColor(Color.argb(85, 255, 255, 255));
+
+            for (int i = 1; i < 7; i++) {
+                float x = i * fieldW / 7f;
+                c.drawLine(x, 30, x, fieldH - 30, p);
+            }
+        }
+
+        private void drawPlayersAndBall(Canvas c) {
+            synchronized (lock) {
+                for (int i = 0; i < MAX_PLAYERS; i++) {
+                    if (players[i].active) {
+                        drawPlayer(c, players[i]);
+                    }
+                }
+
+                p.setStyle(Paint.Style.FILL);
+                p.setColor(Color.WHITE);
+                c.drawCircle(ball.x, ball.y, ball.r, p);
+
+                p.setStyle(Paint.Style.STROKE);
+                p.setStrokeWidth(3);
+                p.setColor(Color.rgb(35, 35, 35));
+                c.drawCircle(ball.x, ball.y, ball.r, p);
+            }
+        }
+
+        private void drawPlayer(Canvas c, Player pl) {
+            int color = playerColors[pl.id % playerColors.length];
+
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(Color.argb(75, 0, 0, 0));
+            c.drawCircle(pl.x + 5, pl.y + 6, pl.r + 3, p);
+
+            p.setColor(color);
+            c.drawCircle(pl.x, pl.y, pl.r, p);
+
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(pl.isLocal ? 6 : 3);
+            p.setColor(pl.isLocal ? Color.YELLOW : Color.WHITE);
+            c.drawCircle(pl.x, pl.y, pl.r, p);
+
+            p.setStyle(Paint.Style.FILL);
+            p.setTextAlign(Paint.Align.CENTER);
+            p.setTypeface(Typeface.DEFAULT_BOLD);
+            p.setTextSize(24);
+            p.setColor(Color.WHITE);
+            c.drawText(String.valueOf(pl.id + 1), pl.x, pl.y + 8, p);
+        }
+
+        private void drawJoystick(Canvas c) {
+            if (!touching) return;
+
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(Color.argb(65, 255, 255, 255));
+            c.drawCircle(touchStartX, touchStartY, 62, p);
+
+            p.setColor(Color.argb(165, 255, 255, 255));
+            c.drawCircle(touchStartX + joyX * 48, touchStartY + joyY * 48, 25, p);
+        }
+
+        private void drawLocalPlayerInfo(Canvas c) {
+            p.setStyle(Paint.Style.FILL);
+            p.setTextAlign(Paint.Align.LEFT);
+            p.setTypeface(Typeface.DEFAULT_BOLD);
+            p.setTextSize(28);
+            p.setColor(Color.argb(210, 255, 255, 255));
+
+            String text;
+
+            if (isHost) {
+                text = "You: Player 1 / RED / HOST";
+            } else if (isClient && localPlayerId >= 0) {
+                String team = (localPlayerId % 2 == 0) ? "RED" : "BLUE";
+                text = "You: Player " + (localPlayerId + 1) + " / " + team;
+            } else if (isClient) {
+                text = "Connecting...";
+            } else {
+                text = "Start HOST or JOIN";
+            }
+
+            c.drawText(text, 22, getHeight() - 24, p);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent e) {
+            int action = e.getActionMasked();
+
+            if (action == MotionEvent.ACTION_DOWN) {
+                touching = true;
+                touchStartX = e.getX();
+                touchStartY = e.getY();
+                joyX = 0;
+                joyY = 0;
+                return true;
+            }
+
+            if (action == MotionEvent.ACTION_MOVE) {
+                float dx = e.getX() - touchStartX;
+                float dy = e.getY() - touchStartY;
+
+                float len = (float) Math.sqrt(dx * dx + dy * dy);
+                float max = 78f;
+
+                if (len > max) {
+                    dx = dx / len * max;
+                    dy = dy / len * max;
+                }
+
+                joyX = dx / max;
+                joyY = dy / max;
+
+                return true;
+            }
+
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                touching = false;
+                joyX = 0;
+                joyY = 0;
+                return true;
+            }
+
+            return true;
+        }
+
+        private int getActivePlayerCount() {
+            int count = 0;
+
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                if (players[i].active) {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private String endpointKey(InetAddress address, int port) {
+            return address.getHostAddress() + ":" + port;
+        }
+
+        private String fmt(float v) {
+            return String.format(Locale.US, "%.2f", v);
+        }
+
+        private int safeInt(String value, int fallback) {
+            try {
+                return Integer.parseInt(value);
+            } catch (Exception e) {
+                return fallback;
+            }
+        }
+
+        private float safeFloat(String value, float fallback) {
+            try {
+                return Float.parseFloat(value);
+            } catch (Exception e) {
+                return fallback;
+            }
+        }
+
+        private String getLocalIpAddress() {
+            try {
+                Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+
+                while (interfaces.hasMoreElements()) {
+                    NetworkInterface intf = interfaces.nextElement();
+                    Enumeration<InetAddress> addresses = intf.getInetAddresses();
+
+                    while (addresses.hasMoreElements()) {
+                        InetAddress addr = addresses.nextElement();
+
+                        if (!addr.isLoopbackAddress() && addr instanceof Inet4Address) {
+                            return addr.getHostAddress();
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            return "Unknown";
+        }
+
+        private static class Player {
+            int id;
+            int team;
+
+            boolean active = false;
+            boolean isLocal = false;
+
+            float x = 0;
+            float y = 0;
+            float vx = 0;
+            float vy = 0;
+            float r = 27;
+
+            float inputX = 0;
+            float inputY = 0;
+
+            InetAddress remoteAddress;
+            int remotePort;
+            String remoteKey = "";
+
+            long lastPacketTime = 0;
+
+            Player(int id) {
+                this.id = id;
+                this.team = id % 2;
+            }
+        }
+
+        private static class Ball {
+            float x;
+            float y;
+            float vx;
+            float vy;
+            float r;
+
+            Ball(float x, float y, float r) {
+                this.x = x;
+                this.y = y;
+                this.r = r;
+            }
+        }
+    }
+}
