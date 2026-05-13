@@ -610,6 +610,13 @@ public class MainActivity extends Activity {
         private RectF passButton = new RectF();
         private RectF throughButton = new RectF();
         private RectF shootButton = new RectF();
+
+        private int actionButtonSizePercent = 115;
+        private int actionButtonInsetX = 36;
+        private int actionButtonInsetY = 42;
+        private int joystickSizePercent = 100;
+        private int joystickRangePercent = 100;
+
         private int pendingActionCode = 0;
         private int joystickPointerId = -1;
 
@@ -1957,10 +1964,10 @@ public class MainActivity extends Activity {
             float w = getWidth();
             float h = getHeight();
 
-            float size = 104f;
-            float gap = 18f;
-            float right = 58f;
-            float bottom = 48f;
+            float size = 104f * (actionButtonSizePercent / 100f);
+            float gap = 18f * (actionButtonSizePercent / 100f);
+            float right = 58f + actionButtonInsetX;
+            float bottom = 48f + actionButtonInsetY;
 
             shootButton.set(w - right - size, h - bottom - size, w - right, h - bottom);
             passButton.set(w - right - size * 2f - gap, h - bottom - size, w - right - size - gap, h - bottom);
