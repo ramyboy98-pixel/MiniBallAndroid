@@ -10,7 +10,6 @@ import android.content.pm.ActivityInfo;
 
 import java.net.*;
 import java.util.*;
-import java.io.*;
 
 public class MainActivity extends Activity {
 
@@ -26,55 +25,8 @@ public class MainActivity extends Activity {
 
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(15, 17, 20));
-
-        LinearLayout topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(10, 6, 10, 6);
-        topBar.setBackgroundColor(Color.rgb(25, 28, 34));
-
-        Button hostBtn = makeButton("HOST");
-        Button joinBtn = makeButton("JOIN");
-
-        ipInput = new EditText(this);
-        ipInput.setHint("Host IP");
-        ipInput.setText("192.168.1.");
-        ipInput.setSingleLine(true);
-        ipInput.setInputType(InputType.TYPE_CLASS_TEXT);
-        ipInput.setTextColor(Color.WHITE);
-        ipInput.setHintTextColor(Color.LTGRAY);
-        ipInput.setTextSize(14);
-        ipInput.setPadding(12, 0, 12, 0);
-        ipInput.setBackgroundColor(Color.rgb(43, 47, 56));
-
-        statusText = new TextView(this);
-        statusText.setText("Ready");
-        statusText.setTextColor(Color.WHITE);
-        statusText.setTextSize(13);
-        statusText.setPadding(12, 0, 12, 0);
-
-        playersText = new TextView(this);
-        playersText.setText("Players: 0");
-        playersText.setTextColor(Color.WHITE);
-        playersText.setTextSize(14);
-        playersText.setGravity(Gravity.CENTER);
-
-        scoreText = new TextView(this);
-        scoreText.setText("0 - 0");
-        scoreText.setTextColor(Color.WHITE);
-        scoreText.setTextSize(22);
-        scoreText.setGravity(Gravity.CENTER);
-        scoreText.setTypeface(Typeface.DEFAULT_BOLD);
-
-        topBar.addView(hostBtn, new LinearLayout.LayoutParams(dp(82), dp(44)));
-        topBar.addView(joinBtn, new LinearLayout.LayoutParams(dp(82), dp(44)));
-        topBar.addView(ipInput, new LinearLayout.LayoutParams(dp(180), dp(44)));
-        topBar.addView(statusText, new LinearLayout.LayoutParams(0, dp(44), 1));
-        topBar.addView(playersText, new LinearLayout.LayoutParams(dp(120), dp(44)));
-        topBar.addView(scoreText, new LinearLayout.LayoutParams(dp(110), dp(44)));
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.rgb(8, 10, 14));
 
         gameView = new GameView(this, new GameView.HudListener() {
             @Override
@@ -108,16 +60,65 @@ public class MainActivity extends Activity {
             }
         });
 
-        root.addView(topBar, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(58)
+        root.addView(gameView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
-        root.addView(gameView, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1
-        ));
+        LinearLayout topBar = new LinearLayout(this);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setPadding(dp(10), dp(6), dp(10), dp(6));
+        topBar.setBackgroundColor(Color.argb(150, 16, 20, 28));
+
+        Button hostBtn = makeButton("HOST");
+        Button joinBtn = makeButton("JOIN");
+
+        ipInput = new EditText(this);
+        ipInput.setHint("Host IP");
+        ipInput.setText("192.168.1.");
+        ipInput.setSingleLine(true);
+        ipInput.setInputType(InputType.TYPE_CLASS_TEXT);
+        ipInput.setTextColor(Color.WHITE);
+        ipInput.setHintTextColor(Color.LTGRAY);
+        ipInput.setTextSize(14);
+        ipInput.setPadding(dp(12), 0, dp(12), 0);
+        ipInput.setBackgroundColor(Color.argb(190, 38, 44, 58));
+
+        statusText = new TextView(this);
+        statusText.setText("Ready");
+        statusText.setTextColor(Color.WHITE);
+        statusText.setTextSize(13);
+        statusText.setPadding(dp(12), 0, dp(12), 0);
+        statusText.setSingleLine(true);
+
+        playersText = new TextView(this);
+        playersText.setText("Players: 0");
+        playersText.setTextColor(Color.WHITE);
+        playersText.setTextSize(14);
+        playersText.setGravity(Gravity.CENTER);
+
+        scoreText = new TextView(this);
+        scoreText.setText("0 - 0");
+        scoreText.setTextColor(Color.WHITE);
+        scoreText.setTextSize(22);
+        scoreText.setGravity(Gravity.CENTER);
+        scoreText.setTypeface(Typeface.DEFAULT_BOLD);
+
+        topBar.addView(hostBtn, new LinearLayout.LayoutParams(dp(82), dp(44)));
+        topBar.addView(joinBtn, new LinearLayout.LayoutParams(dp(82), dp(44)));
+        topBar.addView(ipInput, new LinearLayout.LayoutParams(dp(180), dp(44)));
+        topBar.addView(statusText, new LinearLayout.LayoutParams(0, dp(44), 1));
+        topBar.addView(playersText, new LinearLayout.LayoutParams(dp(120), dp(44)));
+        topBar.addView(scoreText, new LinearLayout.LayoutParams(dp(110), dp(44)));
+
+        FrameLayout.LayoutParams topParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                dp(58)
+        );
+        topParams.gravity = Gravity.TOP;
+
+        root.addView(topBar, topParams);
 
         setContentView(root);
 
@@ -196,14 +197,20 @@ public class MainActivity extends Activity {
         private int redScore = 0;
         private int blueScore = 0;
 
-        private float fieldW = 1400f;
-        private float fieldH = 800f;
+        private float fieldW = 1600f;
+        private float fieldH = 900f;
 
         private float touchStartX = -1;
         private float touchStartY = -1;
         private float joyX = 0;
         private float joyY = 0;
         private boolean touching = false;
+
+        private boolean passPressed = false;
+        private boolean shootPressed = false;
+
+        private RectF passButton = new RectF();
+        private RectF shootButton = new RectF();
 
         private long lastNetSend = 0;
         private long lastHelloSend = 0;
@@ -427,6 +434,12 @@ public class MainActivity extends Activity {
 
                 players[id].inputX = safeFloat(s[2], 0);
                 players[id].inputY = safeFloat(s[3], 0);
+
+                if (s.length >= 6) {
+                    players[id].passPressed = safeInt(s[4], 0) == 1;
+                    players[id].shootPressed = safeInt(s[5], 0) == 1;
+                }
+
                 players[id].lastPacketTime = System.currentTimeMillis();
             }
         }
@@ -595,7 +608,13 @@ public class MainActivity extends Activity {
             String msg;
 
             synchronized (lock) {
-                msg = "INPUT|" + localPlayerId + "|" + fmt(joyX) + "|" + fmt(joyY);
+                int pass = passPressed ? 1 : 0;
+                int shoot = shootPressed ? 1 : 0;
+
+                msg = "INPUT|" + localPlayerId + "|" + fmt(joyX) + "|" + fmt(joyY) + "|" + pass + "|" + shoot;
+
+                passPressed = false;
+                shootPressed = false;
             }
 
             sendRaw(msg);
@@ -650,6 +669,16 @@ public class MainActivity extends Activity {
                 if (localPlayerId >= 0 && localPlayerId < MAX_PLAYERS) {
                     players[localPlayerId].inputX = joyX;
                     players[localPlayerId].inputY = joyY;
+
+                    if (passPressed) {
+                        players[localPlayerId].passPressed = true;
+                        passPressed = false;
+                    }
+
+                    if (shootPressed) {
+                        players[localPlayerId].shootPressed = true;
+                        shootPressed = false;
+                    }
                 }
 
                 if (isHost) {
@@ -682,6 +711,8 @@ public class MainActivity extends Activity {
                 clampPlayer(pl);
             }
 
+            applyBallControlAndActions();
+
             moveBall(dt);
             handleBallWallsAndGoals();
 
@@ -694,6 +725,11 @@ public class MainActivity extends Activity {
                     if (!players[j].active) continue;
                     collidePlayerPlayer(players[i], players[j]);
                 }
+            }
+
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                players[i].passPressed = false;
+                players[i].shootPressed = false;
             }
         }
 
@@ -751,8 +787,8 @@ public class MainActivity extends Activity {
         }
 
         private void handleBallWallsAndGoals() {
-            float goalTop = fieldH / 2f - 135f;
-            float goalBottom = fieldH / 2f + 135f;
+            float goalTop = fieldH / 2f - 150f;
+            float goalBottom = fieldH / 2f + 150f;
 
             if (ball.y < ball.r) {
                 ball.y = ball.r;
@@ -857,6 +893,145 @@ public class MainActivity extends Activity {
             }
         }
 
+        private void applyBallControlAndActions() {
+            Player controller = getClosestPlayerToBall(60f);
+
+            if (controller == null) return;
+
+            float inputLen = (float) Math.sqrt(controller.inputX * controller.inputX + controller.inputY * controller.inputY);
+
+            float dirX;
+            float dirY;
+
+            if (inputLen > 0.15f) {
+                dirX = controller.inputX / inputLen;
+                dirY = controller.inputY / inputLen;
+            } else {
+                float vx = controller.vx;
+                float vy = controller.vy;
+                float vLen = (float) Math.sqrt(vx * vx + vy * vy);
+
+                if (vLen > 5f) {
+                    dirX = vx / vLen;
+                    dirY = vy / vLen;
+                } else {
+                    dirX = controller.team == 0 ? 1f : -1f;
+                    dirY = 0f;
+                }
+            }
+
+            if (controller.shootPressed) {
+                shootToGoal(controller);
+                return;
+            }
+
+            if (controller.passPressed) {
+                passToTeammate(controller);
+                return;
+            }
+
+            if (inputLen > 0.12f) {
+                float targetX = controller.x + dirX * (controller.r + ball.r + 5f);
+                float targetY = controller.y + dirY * (controller.r + ball.r + 5f);
+
+                ball.x += (targetX - ball.x) * 0.22f;
+                ball.y += (targetY - ball.y) * 0.22f;
+
+                ball.vx = controller.vx + dirX * 85f;
+                ball.vy = controller.vy + dirY * 85f;
+            }
+        }
+
+        private Player getClosestPlayerToBall(float maxDistance) {
+            Player best = null;
+            float bestDist = maxDistance;
+
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                Player pl = players[i];
+
+                if (!pl.active) continue;
+
+                float dx = ball.x - pl.x;
+                float dy = ball.y - pl.y;
+                float dist = (float) Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = pl;
+                }
+            }
+
+            return best;
+        }
+
+        private void passToTeammate(Player from) {
+            Player target = null;
+            float bestDist = 999999f;
+
+            for (int i = 0; i < MAX_PLAYERS; i++) {
+                Player pl = players[i];
+
+                if (!pl.active) continue;
+                if (pl.id == from.id) continue;
+                if (pl.team != from.team) continue;
+
+                float dx = pl.x - from.x;
+                float dy = pl.y - from.y;
+                float dist = (float) Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    target = pl;
+                }
+            }
+
+            if (target == null) {
+                shootForward(from, 470f);
+                return;
+            }
+
+            float dx = target.x - ball.x;
+            float dy = target.y - ball.y;
+            float len = (float) Math.sqrt(dx * dx + dy * dy);
+
+            if (len < 1f) return;
+
+            ball.vx = dx / len * 520f;
+            ball.vy = dy / len * 520f;
+        }
+
+        private void shootToGoal(Player from) {
+            float goalX = from.team == 0 ? fieldW + 80f : -80f;
+            float goalY = fieldH / 2f;
+
+            float dx = goalX - ball.x;
+            float dy = goalY - ball.y;
+            float len = (float) Math.sqrt(dx * dx + dy * dy);
+
+            if (len < 1f) return;
+
+            ball.vx = dx / len * 760f;
+            ball.vy = dy / len * 760f;
+        }
+
+        private void shootForward(Player from, float power) {
+            float inputLen = (float) Math.sqrt(from.inputX * from.inputX + from.inputY * from.inputY);
+
+            float dirX;
+            float dirY;
+
+            if (inputLen > 0.15f) {
+                dirX = from.inputX / inputLen;
+                dirY = from.inputY / inputLen;
+            } else {
+                dirX = from.team == 0 ? 1f : -1f;
+                dirY = 0f;
+            }
+
+            ball.vx = dirX * power;
+            ball.vy = dirY * power;
+        }
+
         private void resetLocalClientState() {
             for (int i = 0; i < MAX_PLAYERS; i++) {
                 players[i].active = false;
@@ -880,6 +1055,8 @@ public class MainActivity extends Activity {
                 players[i].isLocal = false;
                 players[i].inputX = 0;
                 players[i].inputY = 0;
+                players[i].passPressed = false;
+                players[i].shootPressed = false;
                 players[i].team = i % 2;
             }
 
@@ -902,14 +1079,14 @@ public class MainActivity extends Activity {
 
         private void spawnPlayer(Player pl) {
             int teamIndex = pl.id / 2;
-            float gap = 85f;
+            float gap = 92f;
 
             if (pl.team == 0) {
-                pl.x = 220f + teamIndex * 55f;
-                pl.y = fieldH / 2f - 170f + teamIndex * gap;
+                pl.x = 240f + teamIndex * 58f;
+                pl.y = fieldH / 2f - 185f + teamIndex * gap;
             } else {
-                pl.x = fieldW - 220f - teamIndex * 55f;
-                pl.y = fieldH / 2f - 170f + teamIndex * gap;
+                pl.x = fieldW - 240f - teamIndex * 58f;
+                pl.y = fieldH / 2f - 185f + teamIndex * gap;
             }
 
             if (pl.y < 90f) pl.y = 90f;
@@ -919,6 +1096,8 @@ public class MainActivity extends Activity {
             pl.vy = 0;
             pl.inputX = 0;
             pl.inputY = 0;
+            pl.passPressed = false;
+            pl.shootPressed = false;
         }
 
         @Override
@@ -928,7 +1107,7 @@ public class MainActivity extends Activity {
             float screenW = getWidth();
             float screenH = getHeight();
 
-            float scale = Math.min(screenW / fieldW, screenH / fieldH);
+            float scale = Math.max(screenW / fieldW, screenH / fieldH);
             float ox = (screenW - fieldW * scale) / 2f;
             float oy = (screenH - fieldH * scale) / 2f;
 
@@ -944,44 +1123,55 @@ public class MainActivity extends Activity {
             c.restore();
 
             drawJoystick(c);
+            drawActionButtons(c);
             drawLocalPlayerInfo(c);
         }
 
         private void drawField(Canvas c) {
             p.setStyle(Paint.Style.FILL);
-            p.setColor(Color.rgb(37, 132, 74));
-            c.drawRoundRect(0, 0, fieldW, fieldH, 26, 26, p);
 
-            p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(5);
-            p.setColor(Color.argb(210, 255, 255, 255));
-            c.drawRoundRect(18, 18, fieldW - 18, fieldH - 18, 20, 20, p);
-
-            p.setStrokeWidth(4);
-            c.drawLine(fieldW / 2f, 18, fieldW / 2f, fieldH - 18, p);
-            c.drawCircle(fieldW / 2f, fieldH / 2f, 105, p);
-
-            float goalTop = fieldH / 2f - 135f;
-            float goalBottom = fieldH / 2f + 135f;
-
-            p.setStyle(Paint.Style.FILL);
-            p.setColor(Color.rgb(30, 33, 40));
-            c.drawRect(-20, goalTop, 25, goalBottom, p);
-            c.drawRect(fieldW - 25, goalTop, fieldW + 20, goalBottom, p);
+            float stripeW = fieldW / 10f;
+            for (int i = 0; i < 10; i++) {
+                if (i % 2 == 0) {
+                    p.setColor(Color.rgb(64, 165, 76));
+                } else {
+                    p.setColor(Color.rgb(82, 190, 90));
+                }
+                c.drawRect(i * stripeW, 0, (i + 1) * stripeW, fieldH, p);
+            }
 
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(7);
+            p.setColor(Color.rgb(245, 245, 245));
+            c.drawRect(18, 18, fieldW - 18, fieldH - 18, p);
+
+            p.setStrokeWidth(5);
+            p.setColor(Color.argb(220, 255, 255, 255));
+            c.drawLine(fieldW / 2f, 18, fieldW / 2f, fieldH - 18, p);
+            c.drawCircle(fieldW / 2f, fieldH / 2f, 115, p);
+
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(Color.WHITE);
+            c.drawCircle(fieldW / 2f, fieldH / 2f, 7, p);
+
+            float goalTop = fieldH / 2f - 150f;
+            float goalBottom = fieldH / 2f + 150f;
+
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(Color.rgb(36, 44, 54));
+            c.drawRect(-30, goalTop, 28, goalBottom, p);
+            c.drawRect(fieldW - 28, goalTop, fieldW + 30, goalBottom, p);
+
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(8);
             p.setColor(Color.WHITE);
             c.drawLine(0, goalTop, 0, goalBottom, p);
             c.drawLine(fieldW, goalTop, fieldW, goalBottom, p);
 
-            p.setStrokeWidth(3);
-            p.setColor(Color.argb(85, 255, 255, 255));
-
-            for (int i = 1; i < 7; i++) {
-                float x = i * fieldW / 7f;
-                c.drawLine(x, 30, x, fieldH - 30, p);
-            }
+            p.setStrokeWidth(4);
+            p.setColor(Color.argb(200, 255, 255, 255));
+            c.drawRect(18, fieldH / 2f - 210f, 210, fieldH / 2f + 210f, p);
+            c.drawRect(fieldW - 210, fieldH / 2f - 210f, fieldW - 18, fieldH / 2f + 210f, p);
         }
 
         private void drawPlayersAndBall(Canvas c) {
@@ -1037,12 +1227,46 @@ public class MainActivity extends Activity {
             c.drawCircle(touchStartX + joyX * 48, touchStartY + joyY * 48, 25, p);
         }
 
+        private void drawActionButtons(Canvas c) {
+            float w = getWidth();
+            float h = getHeight();
+
+            float size = 92f;
+            float gap = 18f;
+
+            shootButton.set(w - size - 28f, h - size - 34f, w - 28f, h - 34f);
+            passButton.set(w - size * 2f - gap - 28f, h - size - 34f, w - size - gap - 28f, h - 34f);
+
+            p.setStyle(Paint.Style.FILL);
+
+            p.setColor(Color.argb(185, 255, 172, 32));
+            c.drawOval(shootButton, p);
+
+            p.setColor(Color.argb(185, 45, 145, 255));
+            c.drawOval(passButton, p);
+
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(4);
+            p.setColor(Color.WHITE);
+            c.drawOval(shootButton, p);
+            c.drawOval(passButton, p);
+
+            p.setStyle(Paint.Style.FILL);
+            p.setTypeface(Typeface.DEFAULT_BOLD);
+            p.setTextAlign(Paint.Align.CENTER);
+            p.setTextSize(21);
+            p.setColor(Color.WHITE);
+
+            c.drawText("SHOOT", shootButton.centerX(), shootButton.centerY() + 8, p);
+            c.drawText("PASS", passButton.centerX(), passButton.centerY() + 8, p);
+        }
+
         private void drawLocalPlayerInfo(Canvas c) {
             p.setStyle(Paint.Style.FILL);
             p.setTextAlign(Paint.Align.LEFT);
             p.setTypeface(Typeface.DEFAULT_BOLD);
-            p.setTextSize(28);
-            p.setColor(Color.argb(210, 255, 255, 255));
+            p.setTextSize(26);
+            p.setColor(Color.argb(230, 255, 255, 255));
 
             String text;
 
@@ -1064,18 +1288,33 @@ public class MainActivity extends Activity {
         public boolean onTouchEvent(MotionEvent e) {
             int action = e.getActionMasked();
 
+            float x = e.getX();
+            float y = e.getY();
+
             if (action == MotionEvent.ACTION_DOWN) {
+                if (shootButton.contains(x, y)) {
+                    shootPressed = true;
+                    return true;
+                }
+
+                if (passButton.contains(x, y)) {
+                    passPressed = true;
+                    return true;
+                }
+
                 touching = true;
-                touchStartX = e.getX();
-                touchStartY = e.getY();
+                touchStartX = x;
+                touchStartY = y;
                 joyX = 0;
                 joyY = 0;
                 return true;
             }
 
             if (action == MotionEvent.ACTION_MOVE) {
-                float dx = e.getX() - touchStartX;
-                float dy = e.getY() - touchStartY;
+                if (!touching) return true;
+
+                float dx = x - touchStartX;
+                float dy = y - touchStartY;
 
                 float len = (float) Math.sqrt(dx * dx + dy * dy);
                 float max = 78f;
@@ -1173,6 +1412,9 @@ public class MainActivity extends Activity {
 
             float inputX = 0;
             float inputY = 0;
+
+            boolean passPressed = false;
+            boolean shootPressed = false;
 
             InetAddress remoteAddress;
             int remotePort;
