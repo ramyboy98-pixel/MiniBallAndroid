@@ -382,7 +382,7 @@ public class MainActivity extends Activity {
         private int redScore = 0;
         private int blueScore = 0;
 
-        private float fieldW = 1600f;
+        private float fieldW = 1950f;
         private float fieldH = 900f;
 
         private float touchStartX = -1;
@@ -391,10 +391,11 @@ public class MainActivity extends Activity {
         private float joyY = 0;
         private boolean touching = false;
 
-        private RectF actionButton = new RectF();
-        private int actionTapCount = 0;
-        private long actionResolveTime = 0;
+        private RectF passButton = new RectF();
+        private RectF throughButton = new RectF();
+        private RectF shootButton = new RectF();
         private int pendingActionCode = 0;
+        private int joystickPointerId = -1;
 
         private long lastNetSend = 0;
         private long lastHelloSend = 0;
@@ -924,8 +925,6 @@ public class MainActivity extends Activity {
 
         private void update(float dt) {
             synchronized (lock) {
-                resolveActionTapIfReady();
-
                 if (localPlayerId >= 0 && localPlayerId < MAX_PLAYERS) {
                     players[localPlayerId].inputX = joyX;
                     players[localPlayerId].inputY = joyY;
@@ -954,26 +953,6 @@ public class MainActivity extends Activity {
                     }
                 }
             }
-        }
-
-        private void resolveActionTapIfReady() {
-            if (actionTapCount <= 0) return;
-
-            long now = System.currentTimeMillis();
-            if (now < actionResolveTime) return;
-
-            if (actionTapCount == 1) {
-                pendingActionCode = 1;
-                hud.onStatus("PASS");
-            } else if (actionTapCount == 2) {
-                pendingActionCode = 2;
-                hud.onStatus("THROUGH PASS");
-            } else {
-                pendingActionCode = 3;
-                hud.onStatus("POWER SHOOT");
-            }
-
-            actionTapCount = 0;
         }
 
         private void updateTimer() {
@@ -1573,7 +1552,7 @@ public class MainActivity extends Activity {
             float screenW = getWidth();
             float screenH = getHeight();
 
-            float scale = Math.max(screenW / fieldW, screenH / fieldH);
+            float scale = Math.min(screenW / fieldW, screenH / fieldH);
             float ox = (screenW - fieldW * scale) / 2f;
             float oy = (screenH - fieldH * scale) / 2f;
 
@@ -1589,7 +1568,7 @@ public class MainActivity extends Activity {
             c.restore();
 
             drawJoystick(c);
-            drawActionButton(c);
+            drawActionButtons(c);
             drawLocalPlayerInfo(c);
         }
 
@@ -1706,32 +1685,47 @@ public class MainActivity extends Activity {
             c.drawCircle(touchStartX + joyX * 48, touchStartY + joyY * 48, 25, p);
         }
 
-        private void drawActionButton(Canvas c) {
+        private void drawActionButtons(Canvas c) {
             float w = getWidth();
             float h = getHeight();
 
-            float size = 116f;
+            float size = 104f;
+            float gap = 18f;
+            float right = 58f;
+            float bottom = 48f;
 
-            actionButton.set(w - size - 28f, h - size - 32f, w - 28f, h - 32f);
+            shootButton.set(w - right - size, h - bottom - size, w - right, h - bottom);
+            passButton.set(w - right - size * 2f - gap, h - bottom - size, w - right - size - gap, h - bottom);
+            throughButton.set(w - right - size * 1.5f - gap / 2f, h - bottom - size * 2f - gap, w - right - size * 0.5f - gap / 2f, h - bottom - size - gap);
 
+            drawGameButton(c, passButton, Color.argb(205, 42, 145, 255), "PASS", "1");
+            drawGameButton(c, throughButton, Color.argb(205, 125, 80, 255), "THROUGH", "2");
+            drawGameButton(c, shootButton, Color.argb(210, 255, 158, 28), "SHOOT", "3");
+        }
+
+        private void drawGameButton(Canvas c, RectF r, int color, String title, String small) {
             p.setStyle(Paint.Style.FILL);
-            p.setColor(Color.argb(188, 255, 178, 34));
-            c.drawOval(actionButton, p);
+            p.setColor(Color.argb(70, 0, 0, 0));
+            c.drawOval(r.left + 4, r.top + 5, r.right + 4, r.bottom + 5, p);
+
+            p.setColor(color);
+            c.drawOval(r, p);
 
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(5);
             p.setColor(Color.WHITE);
-            c.drawOval(actionButton, p);
+            c.drawOval(r, p);
 
             p.setStyle(Paint.Style.FILL);
             p.setTypeface(Typeface.DEFAULT_BOLD);
             p.setTextAlign(Paint.Align.CENTER);
-            p.setTextSize(21);
             p.setColor(Color.WHITE);
-            c.drawText("ACTION", actionButton.centerX(), actionButton.centerY() - 8, p);
 
-            p.setTextSize(13);
-            c.drawText("1 PASS  2 THROUGH  3 SHOOT", actionButton.centerX(), actionButton.centerY() + 18, p);
+            p.setTextSize(18);
+            c.drawText(title, r.centerX(), r.centerY() + 3, p);
+
+            p.setTextSize(15);
+            c.drawText(small, r.centerX(), r.centerY() + 27, p);
         }
 
         private void drawLocalPlayerInfo(Canvas c) {
@@ -1760,29 +1754,52 @@ public class MainActivity extends Activity {
         @Override
         public boolean onTouchEvent(MotionEvent e) {
             int action = e.getActionMasked();
+            int index = e.getActionIndex();
+            int pointerId = e.getPointerId(index);
+            float x = e.getX(index);
+            float y = e.getY(index);
 
-            float x = e.getX();
-            float y = e.getY();
-
-            if (action == MotionEvent.ACTION_DOWN) {
-                if (actionButton.contains(x, y)) {
-                    registerActionTap();
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
+                if (shootButton.contains(x, y)) {
+                    pendingActionCode = 3;
+                    hud.onStatus("POWER SHOOT");
                     return true;
                 }
 
-                touching = true;
-                touchStartX = x;
-                touchStartY = y;
-                joyX = 0;
-                joyY = 0;
+                if (throughButton.contains(x, y)) {
+                    pendingActionCode = 2;
+                    hud.onStatus("THROUGH PASS");
+                    return true;
+                }
+
+                if (passButton.contains(x, y)) {
+                    pendingActionCode = 1;
+                    hud.onStatus("PASS");
+                    return true;
+                }
+
+                if (joystickPointerId == -1) {
+                    joystickPointerId = pointerId;
+                    touching = true;
+                    touchStartX = x;
+                    touchStartY = y;
+                    joyX = 0;
+                    joyY = 0;
+                }
                 return true;
             }
 
             if (action == MotionEvent.ACTION_MOVE) {
-                if (!touching) return true;
+                if (!touching || joystickPointerId == -1) return true;
 
-                float dx = x - touchStartX;
-                float dy = y - touchStartY;
+                int moveIndex = e.findPointerIndex(joystickPointerId);
+                if (moveIndex < 0) return true;
+
+                float mx = e.getX(moveIndex);
+                float my = e.getY(moveIndex);
+
+                float dx = mx - touchStartX;
+                float dy = my - touchStartY;
 
                 float len = (float) Math.sqrt(dx * dx + dy * dy);
                 float max = 78f;
@@ -1798,27 +1815,17 @@ public class MainActivity extends Activity {
                 return true;
             }
 
-            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-                touching = false;
-                joyX = 0;
-                joyY = 0;
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) {
+                if (pointerId == joystickPointerId || action == MotionEvent.ACTION_CANCEL) {
+                    joystickPointerId = -1;
+                    touching = false;
+                    joyX = 0;
+                    joyY = 0;
+                }
                 return true;
             }
 
             return true;
-        }
-
-        private void registerActionTap() {
-            long now = System.currentTimeMillis();
-
-            if (now > actionResolveTime) {
-                actionTapCount = 0;
-            }
-
-            actionTapCount++;
-            if (actionTapCount > 3) actionTapCount = 3;
-
-            actionResolveTime = now + 260;
         }
 
         private int getActivePlayerCount() {
