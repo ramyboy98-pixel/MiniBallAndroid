@@ -6,7 +6,9 @@
 
     <application
         android:theme="@style/AppTheme"
-        android:label="Mini Ball"
+        android:label="fireball"
+        android:icon="@drawable/fireball_icon"
+        android:roundIcon="@drawable/fireball_icon"
         android:allowBackup="false"
         android:supportsRtl="true">
 
