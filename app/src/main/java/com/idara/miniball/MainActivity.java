@@ -10,6 +10,7 @@ import android.widget.*;
 import android.text.InputType;
 import android.content.pm.ActivityInfo;
 import android.content.DialogInterface;
+import android.graphics.drawable.GradientDrawable;
 
 import java.net.*;
 import java.util.*;
@@ -21,6 +22,7 @@ public class MainActivity extends Activity {
     private LinearLayout topHud;
     private FrameLayout menuOverlay;
 
+    private TextView matchScoreBubble;
 
     private TextView statusText;
     private TextView scoreText;
@@ -136,6 +138,7 @@ public class MainActivity extends Activity {
         ));
 
         buildCompactHud(rootLayout);
+        buildMatchScoreOverlay(rootLayout);
         addMainMenu(rootLayout);
         addSplashScreen(rootLayout);
 
@@ -323,96 +326,80 @@ public class MainActivity extends Activity {
 
     private void addMainMenu(final FrameLayout root) {
         menuOverlay = new FrameLayout(this);
-        menuOverlay.setBackgroundColor(Color.rgb(9, 12, 18));
+        menuOverlay.setBackgroundColor(Color.rgb(18, 18, 18));
         menuOverlay.setClickable(true);
+        menuOverlay.setPadding(dp(28), dp(22), dp(28), dp(22));
 
-        LinearLayout panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setGravity(Gravity.CENTER);
-        panel.setPadding(dp(28), dp(18), dp(28), dp(18));
+        LinearLayout main = new LinearLayout(this);
+        main.setOrientation(LinearLayout.HORIZONTAL);
+        main.setGravity(Gravity.CENTER);
+        main.setPadding(dp(18), dp(8), dp(18), dp(8));
+
+        LinearLayout leftCard = new LinearLayout(this);
+        leftCard.setOrientation(LinearLayout.VERTICAL);
+        leftCard.setGravity(Gravity.RIGHT);
+        leftCard.setPadding(dp(34), dp(28), dp(34), dp(22));
+        leftCard.setBackground(makeRoundedBg(Color.rgb(34, 34, 34), Color.argb(110, 255, 255, 255), dp(22)));
 
         TextView title = new TextView(this);
-        title.setText("fireball");
+        title.setText("Fireball");
         title.setTextColor(Color.WHITE);
-        title.setTextSize(46);
-        title.setGravity(Gravity.CENTER);
-        title.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
-        title.setShadowLayer(16f, 0f, 0f, Color.rgb(255, 116, 30));
+        title.setTextSize(44);
+        title.setGravity(Gravity.LEFT);
+        title.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
 
-        TextView sub = new TextView(this);
-        sub.setText("إعداد المباراة قبل الدخول");
-        sub.setTextColor(Color.argb(220, 255, 220, 150));
-        sub.setTextSize(16);
-        sub.setGravity(Gravity.CENTER);
-        sub.setPadding(0, 0, 0, dp(12));
+        TextView desc = new TextView(this);
+        desc.setText("نسخة لعب أبطأ وأكثر منطقية. مراوغة، دفاع، نزع كرة، تمرير موجه، وتسديد مضبوط.");
+        desc.setTextColor(Color.argb(225, 245, 245, 245));
+        desc.setTextSize(17);
+        desc.setGravity(Gravity.RIGHT);
+        desc.setLineSpacing(dp(4), 1.0f);
+        desc.setPadding(0, dp(22), 0, 0);
 
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER);
+        Space flex = new Space(this);
 
-        Button hostStart = makeBigMenuButton("HOST\nابدأ كمضيف", Color.rgb(235, 92, 42));
-        Button joinStart = makeBigMenuButton("JOIN\nادخل للغرفة", Color.rgb(55, 125, 245));
-        Button settingsStart = makeBigMenuButton("⚙\nالإعدادات", Color.rgb(50, 58, 72));
+        TextView version = new TextView(this);
+        version.setText("Prototype v0.4 - Slow tactical control");
+        version.setTextColor(Color.argb(150, 255, 255, 255));
+        version.setTextSize(15);
+        version.setGravity(Gravity.LEFT);
 
-        row.addView(hostStart, new LinearLayout.LayoutParams(dp(170), dp(82)));
-        row.addView(joinStart, new LinearLayout.LayoutParams(dp(170), dp(82)));
-        row.addView(settingsStart, new LinearLayout.LayoutParams(dp(150), dp(82)));
+        leftCard.addView(title, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        leftCard.addView(desc, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        leftCard.addView(flex, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+        leftCard.addView(version, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        TextView ipLabel = new TextView(this);
-        ipLabel.setText("IP الهاتف المضيف عند الدخول كلاعب");
-        ipLabel.setTextColor(Color.argb(230, 255, 255, 255));
-        ipLabel.setTextSize(13);
-        ipLabel.setGravity(Gravity.CENTER);
-        ipLabel.setPadding(0, dp(12), 0, dp(4));
+        LinearLayout rightPanel = new LinearLayout(this);
+        rightPanel.setOrientation(LinearLayout.VERTICAL);
+        rightPanel.setGravity(Gravity.CENTER);
+        rightPanel.setPadding(dp(28), 0, 0, 0);
 
-        menuIpInput = new EditText(this);
-        menuIpInput.setText("192.168.1.");
-        menuIpInput.setSingleLine(true);
-        menuIpInput.setGravity(Gravity.CENTER);
-        menuIpInput.setTextSize(16);
-        menuIpInput.setTextColor(Color.WHITE);
-        menuIpInput.setHintTextColor(Color.LTGRAY);
-        menuIpInput.setInputType(InputType.TYPE_CLASS_TEXT);
-        menuIpInput.setBackgroundColor(Color.argb(170, 35, 43, 55));
+        TextView trialBtn = makeMenuActionButton("▶", "لعب تجريبي", Color.rgb(62, 119, 180));
+        TextView hostStart = makeMenuActionButton("◉", "إنشاء غرفة Wi‑Fi", Color.rgb(72, 133, 70));
+        TextView joinStart = makeMenuActionButton("👥+", "الانضمام إلى غرفة", Color.rgb(120, 82, 150));
+        TextView settingsStart = makeMenuActionButton("☷", "الإعدادات", Color.rgb(88, 88, 88));
 
-        LinearLayout teamRow = new LinearLayout(this);
-        teamRow.setOrientation(LinearLayout.HORIZONTAL);
-        teamRow.setGravity(Gravity.CENTER);
-        teamRow.setPadding(0, dp(10), 0, 0);
+        rightPanel.addView(trialBtn, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(70)));
+        rightPanel.addView(makeGap(dp(14)));
+        rightPanel.addView(hostStart, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(70)));
+        rightPanel.addView(makeGap(dp(14)));
+        rightPanel.addView(joinStart, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(70)));
+        rightPanel.addView(makeGap(dp(14)));
+        rightPanel.addView(settingsStart, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(70)));
 
-        menuRedTeamBtn = makeSmallMenuButton("الفريق الأحمر");
-        menuBlueTeamBtn = makeSmallMenuButton("الفريق الأزرق");
-        teamRow.addView(menuRedTeamBtn, new LinearLayout.LayoutParams(dp(150), dp(44)));
-        teamRow.addView(menuBlueTeamBtn, new LinearLayout.LayoutParams(dp(150), dp(44)));
+        main.addView(leftCard, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.15f));
+        main.addView(rightPanel, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 0.95f));
 
-        TextView hint = new TextView(this);
-        hint.setText("اللعب والحجم والأزرار مأخوذة من النسخة القديمة، والواجهة والإعدادات قبل المباراة مأخوذة من النسخة الجديدة.");
-        hint.setTextColor(Color.argb(190, 255, 255, 255));
-        hint.setTextSize(12);
-        hint.setGravity(Gravity.CENTER);
-        hint.setPadding(0, dp(12), 0, 0);
-
-        panel.addView(title, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        panel.addView(sub, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        panel.addView(row);
-        panel.addView(ipLabel, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        panel.addView(menuIpInput, new LinearLayout.LayoutParams(dp(360), dp(46)));
-        panel.addView(teamRow);
-        panel.addView(hint, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        menuOverlay.addView(panel, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-
-        TextView credit = new TextView(this);
-        credit.setText("Mohammed BELKEBIR ABDELKARIM");
-        credit.setTextColor(Color.argb(210, 255, 255, 255));
-        credit.setTextSize(13);
-        credit.setGravity(Gravity.CENTER);
-        credit.setPadding(0, 0, 0, dp(10));
-        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-        cp.gravity = Gravity.BOTTOM;
-        menuOverlay.addView(credit, cp);
-
+        menuOverlay.addView(main, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         root.addView(menuOverlay, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+        trialBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                enterMatchScreen();
+                gameView.setHostConfig(hostRedColor, hostBlueColor, matchMinutes);
+                gameView.startPractice();
+            }
+        });
 
         hostStart.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -424,9 +411,7 @@ public class MainActivity extends Activity {
 
         joinStart.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                if (ipInput != null && menuIpInput != null) ipInput.setText(menuIpInput.getText().toString());
-                enterMatchScreen();
-                gameView.startClient(menuIpInput.getText().toString().trim(), requestedTeam);
+                showJoinDialog();
             }
         });
 
@@ -435,41 +420,88 @@ public class MainActivity extends Activity {
                 showSettingsDialog();
             }
         });
-
-        menuRedTeamBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                requestedTeam = 0;
-                updateTeamButtons();
-            }
-        });
-
-        menuBlueTeamBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                requestedTeam = 1;
-                updateTeamButtons();
-            }
-        });
     }
 
-    private Button makeBigMenuButton(String text, int color) {
-        Button b = new Button(this);
-        b.setText(text);
+    private View makeGap(int height) {
+        Space s = new Space(this);
+        s.setLayoutParams(new LinearLayout.LayoutParams(1, height));
+        return s;
+    }
+
+    private TextView makeMenuActionButton(String icon, String text, int color) {
+        TextView b = new TextView(this);
+        b.setText(icon + "     " + text);
         b.setTextColor(Color.WHITE);
-        b.setTextSize(15);
-        b.setAllCaps(false);
+        b.setTextSize(20);
+        b.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
+        b.setPadding(dp(28), 0, dp(28), 0);
         b.setTypeface(Typeface.DEFAULT_BOLD);
-        b.setBackgroundColor(color);
+        b.setBackground(makeRoundedBg(color, Color.TRANSPARENT, dp(16)));
+        b.setClickable(true);
+        b.setFocusable(true);
         return b;
     }
 
-    private Button makeSmallMenuButton(String text) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setTextColor(Color.WHITE);
-        b.setTextSize(14);
-        b.setAllCaps(false);
-        b.setBackgroundColor(Color.argb(145, 70, 70, 70));
-        return b;
+    private GradientDrawable makeRoundedBg(int fill, int stroke, int radius) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(fill);
+        g.setCornerRadius(radius);
+        if (stroke != Color.TRANSPARENT) {
+            g.setStroke(dp(1), stroke);
+        }
+        return g;
+    }
+
+    private void buildMatchScoreOverlay(FrameLayout root) {
+        matchScoreBubble = makeChipText("0 - 0", 24, Gravity.CENTER);
+        matchScoreBubble.setTypeface(Typeface.DEFAULT_BOLD);
+        matchScoreBubble.setTextColor(Color.WHITE);
+        matchScoreBubble.setBackground(makeRoundedBg(Color.argb(150, 24, 48, 35), Color.TRANSPARENT, dp(10)));
+        matchScoreBubble.setVisibility(View.GONE);
+        scoreText = matchScoreBubble;
+
+        FrameLayout.LayoutParams sp = new FrameLayout.LayoutParams(dp(160), dp(48));
+        sp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        sp.topMargin = dp(12);
+        root.addView(matchScoreBubble, sp);
+    }
+
+    private void showJoinDialog() {
+        final EditText input = new EditText(this);
+        input.setText(menuIpInput != null ? menuIpInput.getText().toString() : "192.168.1.");
+        input.setSingleLine(true);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setGravity(Gravity.CENTER);
+        input.setTextSize(18);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(16), dp(8), dp(16), 0);
+
+        LinearLayout teamRow = new LinearLayout(this);
+        teamRow.setOrientation(LinearLayout.HORIZONTAL);
+        teamRow.setGravity(Gravity.CENTER);
+        Button red = makeMiniButton("الفريق الأحمر");
+        Button blue = makeMiniButton("الفريق الأزرق");
+        teamRow.addView(red, new LinearLayout.LayoutParams(0, dp(44), 1));
+        teamRow.addView(blue, new LinearLayout.LayoutParams(0, dp(44), 1));
+        box.addView(input, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52)));
+        box.addView(teamRow, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(52)));
+
+        red.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { requestedTeam = 0; updateTeamButtons(); }});
+        blue.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { requestedTeam = 1; updateTeamButtons(); }});
+
+        new AlertDialog.Builder(this)
+                .setTitle("الانضمام إلى غرفة")
+                .setView(box)
+                .setPositiveButton("دخول", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        enterMatchScreen();
+                        gameView.startClient(input.getText().toString().trim(), requestedTeam);
+                    }
+                })
+                .setNegativeButton("إلغاء", null)
+                .show();
     }
 
     private void enterMatchScreen() {
@@ -477,7 +509,10 @@ public class MainActivity extends Activity {
             menuOverlay.setVisibility(View.GONE);
         }
         if (topHud != null) {
-            topHud.setVisibility(View.VISIBLE);
+            topHud.setVisibility(View.GONE);
+        }
+        if (matchScoreBubble != null) {
+            matchScoreBubble.setVisibility(View.VISIBLE);
         }
     }
 
@@ -896,6 +931,36 @@ public class MainActivity extends Activity {
 
         public void stopGameLoop() {
             running = false;
+        }
+
+        public void startPractice() {
+            stopNetwork();
+
+            synchronized (lock) {
+                isHost = true;
+                isClient = false;
+                localPlayerId = 0;
+                clientMap.clear();
+                resetMatch();
+
+                players[0].active = true;
+                players[0].isLocal = true;
+                players[0].team = 0;
+                spawnPlayer(players[0]);
+
+                Player rival = players[1];
+                rival.active = true;
+                rival.isLocal = false;
+                rival.team = 1;
+                spawnPlayer(rival);
+
+                matchStartTime = System.currentTimeMillis();
+                lastSecondsLeft = matchDurationMinutes * 60;
+
+                hud.onStatus("لعب تجريبي");
+                hud.onPlayers(getActivePlayerCount());
+                hud.onTime(lastSecondsLeft);
+            }
         }
 
         public void startHost() {
@@ -2039,49 +2104,41 @@ public class MainActivity extends Activity {
 
         private void drawField(Canvas c) {
             p.setStyle(Paint.Style.FILL);
-
-            float stripeW = fieldW / 10f;
-            for (int i = 0; i < 10; i++) {
-                if (i % 2 == 0) {
-                    p.setColor(Color.rgb(64, 165, 76));
-                } else {
-                    p.setColor(Color.rgb(82, 190, 90));
-                }
-                c.drawRect(i * stripeW, 0, (i + 1) * stripeW, fieldH, p);
-            }
+            p.setColor(Color.rgb(86, 145, 72));
+            c.drawRect(0, 0, fieldW, fieldH, p);
 
             p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(8);
-            p.setColor(Color.rgb(245, 245, 245));
-            c.drawRect(4, 4, fieldW - 4, fieldH - 4, p);
+            p.setStrokeWidth(5);
+            p.setColor(Color.rgb(238, 238, 238));
+            c.drawRect(2, 2, fieldW - 2, fieldH - 2, p);
 
             p.setStrokeWidth(5);
             p.setColor(Color.argb(220, 255, 255, 255));
-            c.drawLine(fieldW / 2f, 4, fieldW / 2f, fieldH - 4, p);
-            c.drawCircle(fieldW / 2f, fieldH / 2f, 115, p);
+            c.drawLine(fieldW / 2f, 0, fieldW / 2f, fieldH, p);
+            c.drawCircle(fieldW / 2f, fieldH / 2f, 155, p);
 
             p.setStyle(Paint.Style.FILL);
             p.setColor(Color.WHITE);
-            c.drawCircle(fieldW / 2f, fieldH / 2f, 7, p);
+            c.drawCircle(fieldW / 2f, fieldH / 2f, 6, p);
+
+            float boxTop = fieldH / 2f - 180f;
+            float boxBottom = fieldH / 2f + 180f;
+            float boxW = 255f;
+
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(5);
+            p.setColor(Color.argb(220, 255, 255, 255));
+            c.drawRect(0, boxTop, boxW, boxBottom, p);
+            c.drawRect(fieldW - boxW, boxTop, fieldW, boxBottom, p);
 
             float goalTop = fieldH / 2f - 150f;
             float goalBottom = fieldH / 2f + 150f;
 
             p.setStyle(Paint.Style.FILL);
-            p.setColor(Color.rgb(25, 31, 39));
-            c.drawRect(0, goalTop, 22, goalBottom, p);
-            c.drawRect(fieldW - 22, goalTop, fieldW, goalBottom, p);
-
-            p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(8);
-            p.setColor(Color.WHITE);
-            c.drawLine(4, goalTop, 4, goalBottom, p);
-            c.drawLine(fieldW - 4, goalTop, fieldW - 4, goalBottom, p);
-
-            p.setStrokeWidth(4);
-            p.setColor(Color.argb(200, 255, 255, 255));
-            c.drawRect(4, fieldH / 2f - 210f, 210, fieldH / 2f + 210f, p);
-            c.drawRect(fieldW - 210, fieldH / 2f - 210f, fieldW - 4, fieldH / 2f + 210f, p);
+            p.setColor(Color.rgb(220, 45, 55));
+            c.drawRect(0, goalTop, 12, goalBottom, p);
+            p.setColor(Color.rgb(45, 105, 225));
+            c.drawRect(fieldW - 12, goalTop, fieldW, goalBottom, p);
         }
 
         private void drawPlayersAndBall(Canvas c) {
