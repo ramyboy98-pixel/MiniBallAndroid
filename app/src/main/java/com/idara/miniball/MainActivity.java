@@ -17,6 +17,10 @@ import java.util.*;
 public class MainActivity extends Activity {
 
     private GameView gameView;
+    private FrameLayout rootLayout;
+    private LinearLayout topHud;
+    private FrameLayout menuOverlay;
+
 
     private TextView statusText;
     private TextView scoreText;
@@ -24,6 +28,8 @@ public class MainActivity extends Activity {
     private TextView timerText;
 
     private EditText ipInput;
+    private EditText menuIpInput;
+
 
     private FrameLayout splashOverlay;
     private Handler splashHandler = new Handler();
@@ -33,6 +39,9 @@ public class MainActivity extends Activity {
     private Button redTeamBtn;
     private Button blueTeamBtn;
     private Button settingsBtn;
+    private Button menuRedTeamBtn;
+    private Button menuBlueTeamBtn;
+
 
     private int requestedTeam = 1;
 
@@ -65,10 +74,8 @@ public class MainActivity extends Activity {
 
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.rgb(8, 10, 14));
-
-        buildCompactHud(root);
+        rootLayout = new FrameLayout(this);
+        rootLayout.setBackgroundColor(Color.rgb(8, 10, 14));
 
         gameView = new GameView(MainActivity.this, new GameView.HudListener() {
             @Override
@@ -123,18 +130,21 @@ public class MainActivity extends Activity {
 
         gameView.setHostConfig(hostRedColor, hostBlueColor, matchMinutes);
 
-        root.addView(gameView, 0, new FrameLayout.LayoutParams(
+        rootLayout.addView(gameView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
-        addSplashScreen(root);
+        buildCompactHud(rootLayout);
+        addMainMenu(rootLayout);
+        addSplashScreen(rootLayout);
 
-        setContentView(root);
+        setContentView(rootLayout);
 
         hostBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                enterMatchScreen();
                 gameView.setHostConfig(hostRedColor, hostBlueColor, matchMinutes);
                 gameView.startHost();
             }
@@ -143,6 +153,7 @@ public class MainActivity extends Activity {
         joinBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                enterMatchScreen();
                 String ip = ipInput.getText().toString().trim();
                 gameView.startClient(ip, requestedTeam);
             }
@@ -259,7 +270,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildCompactHud(FrameLayout root) {
-        LinearLayout topHud = new LinearLayout(this);
+        topHud = new LinearLayout(this);
         topHud.setOrientation(LinearLayout.HORIZONTAL);
         topHud.setGravity(Gravity.CENTER_VERTICAL);
         topHud.setPadding(dp(7), dp(4), dp(7), dp(4));
@@ -306,7 +317,168 @@ public class MainActivity extends Activity {
         );
         params.gravity = Gravity.TOP;
 
+        topHud.setVisibility(View.GONE);
         root.addView(topHud, params);
+    }
+
+    private void addMainMenu(final FrameLayout root) {
+        menuOverlay = new FrameLayout(this);
+        menuOverlay.setBackgroundColor(Color.rgb(9, 12, 18));
+        menuOverlay.setClickable(true);
+
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setGravity(Gravity.CENTER);
+        panel.setPadding(dp(28), dp(18), dp(28), dp(18));
+
+        TextView title = new TextView(this);
+        title.setText("fireball");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(46);
+        title.setGravity(Gravity.CENTER);
+        title.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
+        title.setShadowLayer(16f, 0f, 0f, Color.rgb(255, 116, 30));
+
+        TextView sub = new TextView(this);
+        sub.setText("إعداد المباراة قبل الدخول");
+        sub.setTextColor(Color.argb(220, 255, 220, 150));
+        sub.setTextSize(16);
+        sub.setGravity(Gravity.CENTER);
+        sub.setPadding(0, 0, 0, dp(12));
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER);
+
+        Button hostStart = makeBigMenuButton("HOST\nابدأ كمضيف", Color.rgb(235, 92, 42));
+        Button joinStart = makeBigMenuButton("JOIN\nادخل للغرفة", Color.rgb(55, 125, 245));
+        Button settingsStart = makeBigMenuButton("⚙\nالإعدادات", Color.rgb(50, 58, 72));
+
+        row.addView(hostStart, new LinearLayout.LayoutParams(dp(170), dp(82)));
+        row.addView(joinStart, new LinearLayout.LayoutParams(dp(170), dp(82)));
+        row.addView(settingsStart, new LinearLayout.LayoutParams(dp(150), dp(82)));
+
+        TextView ipLabel = new TextView(this);
+        ipLabel.setText("IP الهاتف المضيف عند الدخول كلاعب");
+        ipLabel.setTextColor(Color.argb(230, 255, 255, 255));
+        ipLabel.setTextSize(13);
+        ipLabel.setGravity(Gravity.CENTER);
+        ipLabel.setPadding(0, dp(12), 0, dp(4));
+
+        menuIpInput = new EditText(this);
+        menuIpInput.setText("192.168.1.");
+        menuIpInput.setSingleLine(true);
+        menuIpInput.setGravity(Gravity.CENTER);
+        menuIpInput.setTextSize(16);
+        menuIpInput.setTextColor(Color.WHITE);
+        menuIpInput.setHintTextColor(Color.LTGRAY);
+        menuIpInput.setInputType(InputType.TYPE_CLASS_TEXT);
+        menuIpInput.setBackgroundColor(Color.argb(170, 35, 43, 55));
+
+        LinearLayout teamRow = new LinearLayout(this);
+        teamRow.setOrientation(LinearLayout.HORIZONTAL);
+        teamRow.setGravity(Gravity.CENTER);
+        teamRow.setPadding(0, dp(10), 0, 0);
+
+        menuRedTeamBtn = makeSmallMenuButton("الفريق الأحمر");
+        menuBlueTeamBtn = makeSmallMenuButton("الفريق الأزرق");
+        teamRow.addView(menuRedTeamBtn, new LinearLayout.LayoutParams(dp(150), dp(44)));
+        teamRow.addView(menuBlueTeamBtn, new LinearLayout.LayoutParams(dp(150), dp(44)));
+
+        TextView hint = new TextView(this);
+        hint.setText("اللعب والحجم والأزرار مأخوذة من النسخة القديمة، والواجهة والإعدادات قبل المباراة مأخوذة من النسخة الجديدة.");
+        hint.setTextColor(Color.argb(190, 255, 255, 255));
+        hint.setTextSize(12);
+        hint.setGravity(Gravity.CENTER);
+        hint.setPadding(0, dp(12), 0, 0);
+
+        panel.addView(title, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        panel.addView(sub, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        panel.addView(row);
+        panel.addView(ipLabel, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        panel.addView(menuIpInput, new LinearLayout.LayoutParams(dp(360), dp(46)));
+        panel.addView(teamRow);
+        panel.addView(hint, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        menuOverlay.addView(panel, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+        TextView credit = new TextView(this);
+        credit.setText("Mohammed BELKEBIR ABDELKARIM");
+        credit.setTextColor(Color.argb(210, 255, 255, 255));
+        credit.setTextSize(13);
+        credit.setGravity(Gravity.CENTER);
+        credit.setPadding(0, 0, 0, dp(10));
+        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+        cp.gravity = Gravity.BOTTOM;
+        menuOverlay.addView(credit, cp);
+
+        root.addView(menuOverlay, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+        hostStart.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                enterMatchScreen();
+                gameView.setHostConfig(hostRedColor, hostBlueColor, matchMinutes);
+                gameView.startHost();
+            }
+        });
+
+        joinStart.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (ipInput != null && menuIpInput != null) ipInput.setText(menuIpInput.getText().toString());
+                enterMatchScreen();
+                gameView.startClient(menuIpInput.getText().toString().trim(), requestedTeam);
+            }
+        });
+
+        settingsStart.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                showSettingsDialog();
+            }
+        });
+
+        menuRedTeamBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                requestedTeam = 0;
+                updateTeamButtons();
+            }
+        });
+
+        menuBlueTeamBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                requestedTeam = 1;
+                updateTeamButtons();
+            }
+        });
+    }
+
+    private Button makeBigMenuButton(String text, int color) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setTextColor(Color.WHITE);
+        b.setTextSize(15);
+        b.setAllCaps(false);
+        b.setTypeface(Typeface.DEFAULT_BOLD);
+        b.setBackgroundColor(color);
+        return b;
+    }
+
+    private Button makeSmallMenuButton(String text) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setTextColor(Color.WHITE);
+        b.setTextSize(14);
+        b.setAllCaps(false);
+        b.setBackgroundColor(Color.argb(145, 70, 70, 70));
+        return b;
+    }
+
+    private void enterMatchScreen() {
+        if (menuOverlay != null) {
+            menuOverlay.setVisibility(View.GONE);
+        }
+        if (topHud != null) {
+            topHud.setVisibility(View.VISIBLE);
+        }
     }
 
     private TextView makeChipText(String text, int size, int gravity) {
@@ -332,8 +504,10 @@ public class MainActivity extends Activity {
     }
 
     private void updateTeamButtons() {
-        redTeamBtn.setBackgroundColor(requestedTeam == 0 ? Color.rgb(235, 70, 70) : Color.argb(145, 70, 70, 70));
-        blueTeamBtn.setBackgroundColor(requestedTeam == 1 ? Color.rgb(70, 145, 255) : Color.argb(145, 70, 70, 70));
+        if (redTeamBtn != null) redTeamBtn.setBackgroundColor(requestedTeam == 0 ? Color.rgb(235, 70, 70) : Color.argb(145, 70, 70, 70));
+        if (blueTeamBtn != null) blueTeamBtn.setBackgroundColor(requestedTeam == 1 ? Color.rgb(70, 145, 255) : Color.argb(145, 70, 70, 70));
+        if (menuRedTeamBtn != null) menuRedTeamBtn.setBackgroundColor(requestedTeam == 0 ? Color.rgb(235, 70, 70) : Color.argb(145, 70, 70, 70));
+        if (menuBlueTeamBtn != null) menuBlueTeamBtn.setBackgroundColor(requestedTeam == 1 ? Color.rgb(70, 145, 255) : Color.argb(145, 70, 70, 70));
     }
 
     private void showSettingsDialog() {
@@ -996,6 +1170,8 @@ public class MainActivity extends Activity {
             synchronized (lock) {
                 localPlayerId = safeInt(s[1], -1);
                 int team = safeInt(s[2], 1);
+                fieldW = safeFloat(s[3], fieldW);
+                fieldH = safeFloat(s[4], fieldH);
 
                 if (s.length >= 8) {
                     redTeamColor = safeInt(s[5], redTeamColor);
@@ -1817,6 +1993,22 @@ public class MainActivity extends Activity {
         }
 
         @Override
+        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+            super.onSizeChanged(w, h, oldw, oldh);
+            if (w > 0 && h > 0 && !isClient) {
+                synchronized (lock) {
+                    fieldH = 900f;
+                    fieldW = fieldH * ((float) w / (float) h);
+                    if (fieldW < 1500f) fieldW = 1500f;
+                    if (ball != null && !isHost && !isClient) {
+                        ball.x = fieldW / 2f;
+                        ball.y = fieldH / 2f;
+                    }
+                }
+            }
+        }
+
+        @Override
         protected void onDraw(Canvas c) {
             super.onDraw(c);
 
@@ -1826,6 +2018,8 @@ public class MainActivity extends Activity {
             float scale = Math.min(screenW / fieldW, screenH / fieldH);
             float ox = (screenW - fieldW * scale) / 2f;
             float oy = (screenH - fieldH * scale) / 2f;
+            if (Math.abs(ox) < 1.5f) ox = 0f;
+            if (Math.abs(oy) < 1.5f) oy = 0f;
 
             c.drawColor(Color.rgb(10, 12, 15));
 
